@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bearing Capacity of Shallow Foundations – Terzaghi (1943)</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    /* ─── Base ─────────────────────────────────────────────── */
+    body {
+      background: #f5f6f8;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #333;
+    }
+    h5.page-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: 0.01em;
+    }
+
+    /* ─── Tabs ──────────────────────────────────────────────── */
+    .nav-tabs {
+      border-bottom: 1px solid #d8dde6;
+      gap: 0;
+    }
+    .nav-tabs .nav-link {
+      color: #6b7280;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      padding: 9px 18px;
+      font-size: 0.875rem;
+      background: transparent;
+      transition: color .15s, border-color .15s;
+    }
+    .nav-tabs .nav-link:hover { color: #374151; }
+    .nav-tabs .nav-link.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+      background: transparent;
+    }
+
+    /* ─── Custom input boxes (matches reference style) ────── */
+    .field-box {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .field-inner {
+      border: 1px solid #ced4da;
+      border-radius: 5px;
+      padding: 5px 10px 4px;
+      background: #fff;
+      min-width: 105px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .field-inner label {
+      display: block;
+      font-size: 0.7rem;
+      color: #8a919e;
+      margin-bottom: 1px;
+      line-height: 1;
+      user-select: none;
+    }
+    .field-inner input,
+    .field-inner select {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 0.88rem;
+      color: #1a202c;
+      background: transparent;
+      padding: 0;
+    }
+    .field-inner select { cursor: pointer; }
+    .info-btn {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      color: #6b7280;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    /* ─── Diagram ────────────────────────────────────────────── */
+    #diagram-wrap {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+    #diagram-svg {
+      display: block;
+      width: 100%;
+      height: 360px;
+    }
+
+    /* ─── Results ────────────────────────────────────────────── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .res-card {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .res-card .res-label {
+      font-size: 0.72rem;
+      color: #8a919e;
+      margin-bottom: 2px;
+    }
+    .res-card .res-value {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .res-card.highlight { border-color: #2563eb; background: #eff6ff; }
+    .res-card.highlight .res-value { color: #1d4ed8; font-size: 1.15rem; }
+
+    /* ─── Validation alert ────────────────────────────────────── */
+    #alert-box { display: none; }
+
+    /* ─── Print / GitHub Pages extras ────────────────────────── */
+    footer {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4" style="max-width: 860px;">
+
+  <!-- Title -->
+  <h5 class="page-title text-center mb-3">
+    Bearing Capacity of Shallow Foundations &ndash; Terzaghi (1943)
+  </h5>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3" id="inputTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-soil"
+        type="button" role="tab">Soil Properties</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-geom"
+        type="button" role="tab">Foundation Geometry</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-fs"
+        type="button" role="tab">Factor of Safety</button>
+    </li>
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content mb-3">
+
+    <!-- Soil Properties -->
+    <div class="tab-pane fade show active" id="tab-soil" role="tabpanel">
+      <div class="d-flex flex-wrap gap-3 align-items-center py-2">
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:115px">
+            <label>c (kPa)</label>
+            <input id="inp-c" type="number" min="0" step="0.1" placeholder="0"
+              oninput="onInput()" />
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Soil cohesion [kPa]. Use 0 for cohesionless soils.">i</span>
+        </div>
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:115px">
+            <label>φ (°)</label>
+            <input id="inp-phi" type="number" min="0" max="50" step="0.5" placeholder="0"
+              oninput="onInput()" />
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Internal friction angle [degrees], 0–50°.">i</span>
+        </div>
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:125px">
+            <label>γ (kN/m³)</label>
+            <input id="inp-gamma" type="number" min="0" step="0.1" placeholder="18" value="18"
+              oninput="onInput()" />
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Moist unit weight of soil [kN/m³].">i</span>
+        </div>
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:125px">
+            <label>GWT (m)</label>
+            <input id="inp-gwt" type="number" min="0" step="0.1" placeholder="deep"
+              oninput="onInput()" />
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Groundwater table depth from surface [m]. Leave blank if no water table.">i</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Foundation Geometry -->
+    <div class="tab-pane fade" id="tab-geom" role="tabpanel">
+      <div class="d-flex flex-wrap gap-3 align-items-center py-2">
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:115px">
+            <label>D<sub>f</sub> (m)</label>
+            <input id="inp-df" type="number" min="0.1" step="0.1" placeholder="1.5"
+              oninput="onInput()" />
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Foundation embedment depth [m].">i</span>
+        </div>
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:115px">
+            <label>B (m)</label>
+            <input id="inp-b" type="number" min="0.1" step="0.1" placeholder="1.0"
+              oninput="onInput()" />
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Foundation width or diameter [m].">i</span>
+        </div>
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:150px">
+            <label>Fnd Type</label>
+            <select id="inp-type" onchange="onInput()">
+              <option value="">Select…</option>
+              <option value="strip">Strip (Continuous)</option>
+              <option value="square">Square</option>
+              <option value="circular">Circular</option>
+            </select>
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Foundation shape: Strip (sc=1.0, sγ=1.0) · Square (sc=1.3, sγ=0.8) · Circular (sc=1.3, sγ=0.6).">i</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Factor of Safety -->
+    <div class="tab-pane fade" id="tab-fs" role="tabpanel">
+      <div class="d-flex flex-wrap gap-3 align-items-center py-2">
+
+        <div class="field-box">
+          <div class="field-inner" style="min-width:115px">
+            <label>FS</label>
+            <input id="inp-fs" type="number" min="1" step="0.1" placeholder="3.0" value="3"
+              oninput="onInput()" />
+          </div>
+          <span class="info-btn" data-bs-toggle="tooltip"
+            title="Global factor of safety (typically 2.5–3.0). Used to obtain q_adm = q_ult / FS.">i</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+
+  <!-- Status line: missing fields -->
+  <p id="status-line" class="text-secondary mb-3" style="font-size:.8rem;display:none"></p>
+
+  <!-- Foundation diagram -->
+  <div id="diagram-wrap" class="mb-4">
+    <svg id="diagram-svg" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Soil dot pattern -->
+        <pattern id="soil-dots" width="14" height="14" patternUnits="userSpaceOnUse">
+          <circle cx="3" cy="3" r="1.3" fill="#c8cdd5" />
+        </pattern>
+        <!-- Foundation hatch pattern -->
+        <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45 0 0)">
+          <line x1="0" y1="0" x2="0" y2="10" stroke="#9ca3af" stroke-width="1.2" />
+        </pattern>
+        <!-- Water blue hatch -->
+        <pattern id="water-hatch" width="16" height="8" patternUnits="userSpaceOnUse">
+          <path d="M0 4 Q4 0 8 4 Q12 8 16 4" fill="none" stroke="#60a5fa" stroke-width="1.2"/>
+        </pattern>
+      </defs>
+      <!-- Rendered by JS -->
+    </svg>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section" style="display:none">
+    <h6 class="fw-semibold mb-3 text-secondary" style="font-size:.8rem;letter-spacing:.05em;text-transform:uppercase">
+      Results
+    </h6>
+
+    <p class="text-muted mb-2" style="font-size:.78rem">Bearing Capacity Factors</p>
+    <div class="results-grid mb-3" id="res-factors"></div>
+
+    <p class="text-muted mb-2" style="font-size:.78rem">Shape &amp; Effective Parameters</p>
+    <div class="results-grid mb-3" id="res-params"></div>
+
+    <p class="text-muted mb-2" style="font-size:.78rem">Bearing Capacity</p>
+    <div class="results-grid mb-4" id="res-final"></div>
+  </div>
+
+  <footer class="text-center mt-2">
+    Terzaghi (1943) · <em>Theoretical Soil Mechanics</em> · Nγ via classic table + linear interpolation
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ════════════════════════════════════════════════
+   Constants & tables
+═══════════════════════════════════════════════ */
+const GAMMA_W = 9.81; // kN/m³
+
+// Classic Terzaghi (1943) Nγ table – linear interpolation used
+const PHI_TBL  = [0,  5,   10,  15,   20,   25,   30,   35,    40,    45,    50];
+const NGAM_TBL = [0, 0.5, 1.2, 2.5, 5.0,  9.7, 19.7, 42.9,  93.7, 262.3, 873.5];
+
+/* ════════════════════════════════════════════════
+   Bootstrap tooltip init
+═══════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+    new bootstrap.Tooltip(el, { placement: 'top', trigger: 'hover' });
+  });
+  onInput(); // run with default values so diagram renders immediately
+});
+
+/* ════════════════════════════════════════════════
+   Input handler – runs on every keystroke
+═══════════════════════════════════════════════ */
+function onInput() {
+  const vals = readInputs();
+  if (vals === null) {
+    // partial input – update diagram if geometry present, show missing fields
+    const Df   = parseFloat(document.getElementById('inp-df').value);
+    const B    = parseFloat(document.getElementById('inp-b').value);
+    const gwt  = parseFloat(document.getElementById('inp-gwt').value);
+    const type = document.getElementById('inp-type').value;
+    if (Df > 0 && B > 0) drawDiagram({ Df, B, gwt: isNaN(gwt) ? 9999 : gwt, type });
+    else drawDiagram(null);
+    document.getElementById('results-section').style.display = 'none';
+    showMissingFields();
+    return;
+  }
+  document.getElementById('status-line').style.display = 'none';
+  calculate(vals);
+}
+
+function showMissingFields() {
+  const missing = [];
+  if (isNaN(parseFloat(document.getElementById('inp-gamma').value))) missing.push('γ (kN/m³)');
+  if (isNaN(parseFloat(document.getElementById('inp-df').value)) ||
+      parseFloat(document.getElementById('inp-df').value) <= 0)    missing.push('Df (m)');
+  if (isNaN(parseFloat(document.getElementById('inp-b').value)) ||
+      parseFloat(document.getElementById('inp-b').value) <= 0)     missing.push('B (m)');
+  if (!document.getElementById('inp-type').value)                   missing.push('Fnd Type');
+  if (isNaN(parseFloat(document.getElementById('inp-fs').value)))   missing.push('FS');
+  const el = document.getElementById('status-line');
+  if (missing.length > 0) {
+    el.textContent = '⚠ Preencha: ' + missing.join(' · ');
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+/* ════════════════════════════════════════════════
+   Read & validate all inputs
+   Returns object or null if incomplete/invalid
+═══════════════════════════════════════════════ */
+function readInputs() {
+  const c     = parseFloat(document.getElementById('inp-c').value);
+  const phi   = parseFloat(document.getElementById('inp-phi').value);
+  const gamma = parseFloat(document.getElementById('inp-gamma').value);
+  const gwtRaw= document.getElementById('inp-gwt').value.trim();
+  const Df    = parseFloat(document.getElementById('inp-df').value);
+  const B     = parseFloat(document.getElementById('inp-b').value);
+  const type  = document.getElementById('inp-type').value;
+  const FS    = parseFloat(document.getElementById('inp-fs').value);
+
+  // Required: gamma, Df, B, type, FS
+  if (isNaN(gamma) || isNaN(Df) || isNaN(B) || !type || isNaN(FS)) return null;
+  if (Df <= 0 || B <= 0 || FS < 1) return null;
+
+  return {
+    c:     isNaN(c)   ? 0    : c,
+    phi:   isNaN(phi) ? 0    : Math.min(Math.max(phi, 0), 50),
+    gamma,
+    gwt:   gwtRaw === '' ? 9999 : parseFloat(gwtRaw),
+    Df, B, type, FS
+  };
+}
+
+/* ════════════════════════════════════════════════
+   Core calculations
+═══════════════════════════════════════════════ */
+function calculate(v) {
+  const phi_r = v.phi * Math.PI / 180;
+
+  // ── Bearing capacity factors ──────────────────
+  let Nc, Nq, Ng;
+  if (v.phi < 0.01) {
+    Nq = 1.0;
+    Nc = 5.7;   // Terzaghi (1943) value for φ=0
+    Ng = 0.0;
+  } else {
+    // Terzaghi exact formula:
+    // Nq = exp(2·(0.75π − φ_rad/2)·tan(φ)) / (2·cos²(45+φ/2))
+    Nq = Math.exp(2 * (0.75 * Math.PI - phi_r / 2) * Math.tan(phi_r))
+         / (2 * Math.pow(Math.cos((45 + v.phi / 2) * Math.PI / 180), 2));
+    Nc = (Nq - 1) / Math.tan(phi_r);
+    Ng = interpNgamma(v.phi);
+  }
+
+  // ── Shape factors ─────────────────────────────
+  let sc, sg;
+  if (v.type === 'square')   { sc = 1.3; sg = 0.8; }
+  else if (v.type === 'circular') { sc = 1.3; sg = 0.6; }
+  else                        { sc = 1.0; sg = 1.0; } // strip
+
+  // ── GWT correction ────────────────────────────
+  // H = depth of Terzaghi rupture wedge below foundation base
+  const H = 0.5 * v.B * Math.tan((45 + v.phi / 2) * Math.PI / 180);
+  let q_eff, gamma_eff;
+
+  if (v.gwt <= v.Df) {
+    // Water table at or above foundation base
+    // Overburden: soil above GWT at γ, below GWT at γ'
+    q_eff     = v.gamma * v.gwt + (v.gamma - GAMMA_W) * (v.Df - v.gwt);
+    gamma_eff = v.gamma - GAMMA_W;
+  } else if (v.gwt < v.Df + H) {
+    // Water table within the failure wedge
+    q_eff     = v.gamma * v.Df;
+    const d   = v.gwt - v.Df;           // depth of WT below base
+    gamma_eff = (v.gamma - GAMMA_W) + (d / H) * GAMMA_W;
+  } else {
+    // Water table below failure zone – no correction
+    q_eff     = v.gamma * v.Df;
+    gamma_eff = v.gamma;
+  }
+
+  // Clamp effective unit weight to submerged minimum
+  gamma_eff = Math.max(gamma_eff, v.gamma - GAMMA_W);
+
+  // ── Final bearing capacity ─────────────────────
+  const q_ult = v.c * Nc * sc + q_eff * Nq + 0.5 * gamma_eff * v.B * Ng * sg;
+  const q_adm = q_ult / v.FS;
+
+  renderResults({ Nc, Nq, Ng, sc, sg, q_eff, gamma_eff, q_ult, q_adm, H });
+  drawDiagram(v);
+}
+
+/* ════════════════════════════════════════════════
+   Nγ linear interpolation
+═══════════════════════════════════════════════ */
+function interpNgamma(phi) {
+  if (phi <= 0)  return 0;
+  if (phi >= 50) return NGAM_TBL[NGAM_TBL.length - 1];
+  for (let i = 0; i < PHI_TBL.length - 1; i++) {
+    if (phi >= PHI_TBL[i] && phi <= PHI_TBL[i + 1]) {
+      const t = (phi - PHI_TBL[i]) / (PHI_TBL[i + 1] - PHI_TBL[i]);
+      return NGAM_TBL[i] + t * (NGAM_TBL[i + 1] - NGAM_TBL[i]);
+    }
+  }
+  return 0;
+}
+
+/* ════════════════════════════════════════════════
+   Render results cards
+═══════════════════════════════════════════════ */
+function fmt(n, d = 2) { return isFinite(n) ? n.toFixed(d) : '—'; }
+
+function resCard(label, value, highlight = false) {
+  return `<div class="res-card${highlight ? ' highlight' : ''}">
+    <div class="res-label">${label}</div>
+    <div class="res-value">${value}</div>
+  </div>`;
+}
+
+function renderResults(r) {
+  document.getElementById('res-factors').innerHTML =
+    resCard('N<sub>c</sub>', fmt(r.Nc)) +
+    resCard('N<sub>q</sub>', fmt(r.Nq)) +
+    resCard('N<sub>γ</sub>', fmt(r.Ng));
+
+  document.getElementById('res-params').innerHTML =
+    resCard('s<sub>c</sub> (shape)', fmt(r.sc, 1)) +
+    resCard('s<sub>γ</sub> (shape)', fmt(r.sg, 1)) +
+    resCard('q (overburden, kPa)', fmt(r.q_eff)) +
+    resCard('γ<sub>eff</sub> (kN/m³)', fmt(r.gamma_eff)) +
+    resCard('H (wedge depth, m)', fmt(r.H));
+
+  document.getElementById('res-final').innerHTML =
+    resCard('q<sub>ult</sub> (kPa)', fmt(r.q_ult), true) +
+    resCard('q<sub>adm</sub> (kPa)', fmt(r.q_adm), true);
+
+  document.getElementById('results-section').style.display = 'block';
+}
+
+/* ════════════════════════════════════════════════
+   SVG Foundation Diagram
+═══════════════════════════════════════════════ */
+function drawDiagram(vals) {
+  const svg   = document.getElementById('diagram-svg');
+  const W     = svg.clientWidth  || 800;
+  const H_SVG = svg.clientHeight || 360;
+
+  // ── If no geometry, show placeholder ──────────
+  if (!vals || !vals.Df || !vals.B) {
+    svg.innerHTML = `
+      <defs>${svgDefs()}</defs>
+      <rect width="${W}" height="${H_SVG}" fill="url(#soil-dots)"/>
+      <rect x="0" y="0" width="${W}" height="38" fill="#fff"/>
+      <line x1="0" y1="38" x2="${W}" y2="38" stroke="#555" stroke-width="1.5"/>
+      ${groundSymbol(W * 0.38, 38)}
+      <text x="${W * 0.38 + 30}" y="30" font-size="12" fill="#555" font-family="Segoe UI,sans-serif">Ground Surface</text>
+      <rect x="${W*0.25}" y="${H_SVG*0.55}" width="${W*0.5}" height="44"
+        rx="6" fill="white" stroke="#d1d5db"/>
+      <text x="${W*0.5}" y="${H_SVG*0.55+27}" text-anchor="middle"
+        font-size="12.5" fill="#9ca3af" font-family="Segoe UI,sans-serif">
+        Enter values to generate foundation diagram
+      </text>`;
+    return;
+  }
+
+  const { Df, B, gwt, type } = vals;
+
+  // ── Layout constants ───────────────────────────
+  const TOP_PAD  = 42;   // px above ground surface
+  const BOT_PAD  = 28;   // px below scene
+  const availH   = H_SVG - TOP_PAD - BOT_PAD;
+  const availW   = W * 0.7;
+
+  // Scene: show Df + 1.5*B below base (for rupture zone sense)
+  const sceneDepth = Df + Math.max(1.5 * B, 1.2);
+  const scale      = Math.min(availH / sceneDepth, availW / (B * 5));
+
+  const groundY  = TOP_PAD;
+  const cx       = W / 2;
+
+  const df_px    = Df  * scale;
+  const b_px     = B   * scale;
+
+  // Foundation dimensions (proportional but with min sizes)
+  const footH_px = Math.max(b_px * 0.22, 14);
+  const footW_px = b_px;
+  const stemW_px = Math.max(footW_px * 0.3, 14);
+  const stemH_px = df_px - footH_px;
+
+  const baseY    = groundY + df_px;   // bottom of footing
+  const footTopY = baseY - footH_px;
+  const stemTopY = groundY;
+
+  // GWT line
+  const gwt_px   = Math.min(gwt * scale, H_SVG - BOT_PAD - 4);
+  const gwtY     = groundY + gwt_px;
+  const showGWT  = gwt < 9000 && gwtY < H_SVG - BOT_PAD;
+
+  // ── Build SVG ──────────────────────────────────
+  let html = `<defs>${svgDefs()}</defs>`;
+
+  // Soil background
+  html += `<rect width="${W}" height="${H_SVG}" fill="url(#soil-dots)"/>`;
+
+  // Sky / above-ground strip
+  html += `<rect x="0" y="0" width="${W}" height="${groundY}" fill="#f9fafb"/>`;
+
+  // Water zone tint (if GWT above base)
+  if (showGWT && gwtY < baseY) {
+    html += `<rect x="0" y="${gwtY}" width="${W}" height="${baseY - gwtY}"
+      fill="rgba(219,234,254,0.35)"/>`;
+  }
+
+  // Ground surface line
+  html += `<line x1="0" y1="${groundY}" x2="${W}" y2="${groundY}"
+    stroke="#555" stroke-width="1.5"/>`;
+  html += groundSymbol(cx - b_px * 1.5, groundY);
+  html += `<text x="${cx - b_px*1.5 + 28}" y="${groundY - 8}"
+    font-size="11.5" fill="#555" font-family="Segoe UI,sans-serif">Ground Surface</text>`;
+
+  // Stem (column)
+  if (stemH_px > 0) {
+    html += `<rect x="${cx - stemW_px/2}" y="${stemTopY}"
+      width="${stemW_px}" height="${stemH_px}"
+      fill="url(#hatch)" stroke="#555" stroke-width="1.2"/>`;
+  }
+
+  // Footing
+  html += `<rect x="${cx - footW_px/2}" y="${footTopY}"
+    width="${footW_px}" height="${footH_px}"
+    fill="url(#hatch)" stroke="#555" stroke-width="1.5"/>`;
+
+  // GWT line
+  if (showGWT) {
+    html += `<line x1="0" y1="${gwtY}" x2="${W}" y2="${gwtY}"
+      stroke="#2563eb" stroke-width="1.5" stroke-dasharray="8 5" opacity=".8"/>`;
+    html += `<text x="8" y="${gwtY - 4}"
+      font-size="10.5" fill="#2563eb" font-family="Segoe UI,sans-serif">GWT</text>`;
+    // Water level symbol
+    html += waveSymbol(W - 52, gwtY);
+  }
+
+  // ── Dimension annotations ─────────────────────
+  const annX_L = cx - footW_px / 2 - 38;  // left of footing
+
+  // Df arrow (left side)
+  html += dimArrow(annX_L, groundY, annX_L, baseY);
+  html += `<text x="${annX_L - 4}" y="${groundY + df_px/2 + 4}"
+    text-anchor="end" font-size="11" fill="#374151" font-family="Segoe UI,sans-serif"
+    font-style="italic">D<tspan font-size="8" dy="2">f</tspan>
+    <tspan dy="-2"> = ${Df.toFixed(2)} m</tspan></text>`;
+
+  // B arrow (below footing)
+  const barrowY = baseY + 22;
+  html += dimArrow(cx - footW_px/2, barrowY, cx + footW_px/2, barrowY, true);
+  html += `<text x="${cx}" y="${barrowY + 14}"
+    text-anchor="middle" font-size="11" fill="#374151" font-family="Segoe UI,sans-serif"
+    font-style="italic">B = ${B.toFixed(2)} m</text>`;
+
+  // Foundation type label (top right)
+  const typeLabel = type === 'strip' ? 'Strip' : type === 'square' ? 'Square' : 'Circular';
+  html += `<text x="${W - 12}" y="${groundY + 18}"
+    text-anchor="end" font-size="11" fill="#6b7280" font-family="Segoe UI,sans-serif">
+    ${typeLabel}</text>`;
+
+  svg.innerHTML = html;
+}
+
+/* ─ SVG helper: defs string ─────────────────── */
+function svgDefs() {
+  return `
+    <pattern id="soil-dots" width="14" height="14" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.3" fill="#c8cdd5"/>
+    </pattern>
+    <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse"
+      patternTransform="rotate(45 0 0)">
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#9ca3af" stroke-width="1.2"/>
+    </pattern>`;
+}
+
+/* ─ SVG helper: ground surface symbol ───────── */
+function groundSymbol(x, y) {
+  return `<g transform="translate(${x},${y})">
+    <line x1="0" y1="0" x2="20" y2="0" stroke="#555" stroke-width="1.5"/>
+    <line x1="-3" y1="0" x2="3"  y2="7" stroke="#555" stroke-width="1.5"/>
+    <line x1="4"  y1="0" x2="10" y2="7" stroke="#555" stroke-width="1.5"/>
+    <line x1="11" y1="0" x2="17" y2="7" stroke="#555" stroke-width="1.5"/>
+  </g>`;
+}
+
+/* ─ SVG helper: wave / water symbol ─────────── */
+function waveSymbol(x, y) {
+  return `<g transform="translate(${x},${y - 6})" opacity=".8">
+    <path d="M0 4 Q4 0 8 4 Q12 8 16 4 Q20 0 24 4 Q28 8 32 4 Q36 0 40 4"
+      fill="none" stroke="#2563eb" stroke-width="1.5"/>
+    <path d="M0 10 Q4 6 8 10 Q12 14 16 10 Q20 6 24 10 Q28 14 32 10 Q36 6 40 10"
+      fill="none" stroke="#2563eb" stroke-width="1.5"/>
+  </g>`;
+}
+
+/* ─ SVG helper: dimension arrow ─────────────── */
+function dimArrow(x1, y1, x2, y2, horizontal = false) {
+  const aw = 5; // arrowhead size
+  let path = '';
+  if (horizontal) {
+    // left arrowhead
+    path += `M${x1+aw},${y1-aw} L${x1},${y1} L${x1+aw},${y1+aw} `;
+    // right arrowhead
+    path += `M${x2-aw},${y2-aw} L${x2},${y2} L${x2-aw},${y2+aw}`;
+    path = `<path d="M${x1},${y1} L${x2},${y2}" stroke="#374151" stroke-width="1" fill="none"/>
+      <path d="${path}" stroke="#374151" stroke-width="1" fill="none"/>`;
+  } else {
+    // top arrowhead
+    path += `M${x1-aw},${y1+aw} L${x1},${y1} L${x1+aw},${y1+aw} `;
+    // bottom arrowhead
+    path += `M${x2-aw},${y2-aw} L${x2},${y2} L${x2+aw},${y2-aw}`;
+    path = `<path d="M${x1},${y1} L${x2},${y2}" stroke="#374151" stroke-width="1" fill="none"/>
+      <path d="${path}" stroke="#374151" stroke-width="1" fill="none"/>`;
+  }
+  // tick marks at ends
+  if (horizontal) {
+    path += `<line x1="${x1}" y1="${y1-7}" x2="${x1}" y2="${y1+7}" stroke="#374151" stroke-width="1"/>`;
+    path += `<line x1="${x2}" y1="${y2-7}" x2="${x2}" y2="${y2+7}" stroke="#374151" stroke-width="1"/>`;
+  } else {
+    path += `<line x1="${x1-7}" y1="${y1}" x2="${x1+7}" y2="${y1}" stroke="#374151" stroke-width="1"/>`;
+    path += `<line x1="${x2-7}" y1="${y2}" x2="${x2+7}" y2="${y2}" stroke="#374151" stroke-width="1"/>`;
+  }
+  return path;
+}
+
+</script>
+</body>
+</html>
