@@ -543,10 +543,25 @@
     <div class="results-grid mb-4" id="res-final"></div>
   </div>
 
+  <!-- Export PDF button -->
+  <div id="export-section" style="display:none;text-align:center;margin-bottom:20px">
+    <button onclick="exportPdf()"
+      style="background:#2563eb;color:#fff;border:none;border-radius:6px;
+             padding:9px 22px;font-size:.9rem;font-weight:600;cursor:pointer;
+             transition:background .15s"
+      onmouseover="this.style.background='#1d4ed8'"
+      onmouseout="this.style.background='#2563eb'">
+      ⬇ Exportar PDF
+    </button>
+  </div>
+
   <footer class="text-center mt-2">
     Terzaghi (1943) · <em>Theoretical Soil Mechanics</em> · Nγ via classic table + linear interpolation
   </footer>
 </div>
+
+<!-- PDF content (rendered off-screen, populated by JS) -->
+<div id="pdf-content"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -555,6 +570,7 @@
    Constants & tables
 ═══════════════════════════════════════════════ */
 const GAMMA_W = 9.81; // kN/m³
+let _lastResults = null; // cache for PDF export
 
 // Classic Terzaghi (1943) Nγ table – linear interpolation used
 const PHI_TBL  = [0,  5,   10,  15,   20,   25,   30,   35,    40,    45,    50];
@@ -584,6 +600,7 @@ function onInput() {
     if (Df >= 0 && B > 0) drawDiagram({ Df, B, gwt: isNaN(gwt) ? 9999 : gwt, type });
     else drawDiagram(null);
     document.getElementById('results-section').style.display = 'none';
+    document.getElementById('export-section').style.display = 'none';
     showMissingFields();
     return;
   }
@@ -740,6 +757,8 @@ function renderResults(r) {
     resCard('q<sub>adm</sub> (kPa)', fmt(r.q_adm), true);
 
   document.getElementById('results-section').style.display = 'block';
+  document.getElementById('export-section').style.display = 'block';
+  _lastResults = r;
 }
 
 /* ════════════════════════════════════════════════
@@ -931,6 +950,107 @@ function dimArrow(x1, y1, x2, y2, horizontal = false) {
     path += `<line x1="${x2-7}" y1="${y2}" x2="${x2+7}" y2="${y2}" stroke="#374151" stroke-width="1"/>`;
   }
   return path;
+}
+
+
+/* ════════════════════════════════════════════════
+   PDF generation
+═══════════════════════════════════════════════ */
+function gwCaseName(v) {
+  const H = 0.5 * v.B * Math.tan((45 + v.phi / 2) * Math.PI / 180);
+  if (v.gwt <= v.Df)      return 'Caso 1 — NA na base ou acima';
+  if (v.gwt < v.Df + H)   return 'Caso 2 — NA dentro da cunha de ruptura';
+  return 'Caso 3 — NA abaixo da zona de ruptura (sem correção)';
+}
+
+function fmtPt(n, d = 2) {
+  return isFinite(n) ? n.toFixed(d).replace('.', ',') : '—';
+}
+
+function buildPdfContent(v, r) {
+  const typeLabel = v.type === 'strip' ? 'Corrida' : v.type === 'square' ? 'Quadrada' : 'Circular';
+  const gwLabel   = v.gwt >= 9000 ? 'profundo' : fmtPt(v.gwt) + ' m';
+  const date      = new Date().toLocaleDateString('pt-BR');
+
+  // Clone SVG diagram
+  const svgEl    = document.getElementById('diagram-svg');
+  const svgClone = svgEl.cloneNode(true);
+  svgClone.setAttribute('width',  svgEl.clientWidth  || 600);
+  svgClone.setAttribute('height', svgEl.clientHeight || 260);
+  svgClone.style.cssText = 'display:block;width:100%;height:auto;max-height:220px';
+
+  document.getElementById('pdf-content').innerHTML = `
+    <div class="pdf-header">
+      <h1>MEMORIAL DE CÁLCULO</h1>
+      <p>Capacidade de Carga de Fundação Rasa — Terzaghi (1943)</p>
+      <small>Gerado em ${date}</small>
+    </div>
+
+    <div class="pdf-section-title">1. Dados de Entrada</div>
+    <div class="pdf-inputs">
+      <div class="pdf-input-cell"><div class="lbl">Coesão</div><div class="val">c = ${fmtPt(v.c)} kPa</div></div>
+      <div class="pdf-input-cell"><div class="lbl">Atrito interno</div><div class="val">φ = ${fmtPt(v.phi)}°</div></div>
+      <div class="pdf-input-cell"><div class="lbl">Peso específico</div><div class="val">γ = ${fmtPt(v.gamma)} kN/m³</div></div>
+      <div class="pdf-input-cell"><div class="lbl">Nível d'água</div><div class="val">NA = ${gwLabel}</div></div>
+      <div class="pdf-input-cell"><div class="lbl">Prof. embutimento</div><div class="val">Df = ${fmtPt(v.Df)} m</div></div>
+      <div class="pdf-input-cell"><div class="lbl">Largura</div><div class="val">B = ${fmtPt(v.B)} m</div></div>
+      <div class="pdf-input-cell"><div class="lbl">Tipo</div><div class="val">${typeLabel}</div></div>
+      <div class="pdf-input-cell"><div class="lbl">Fator de segurança</div><div class="val">FS = ${fmtPt(v.FS, 1)}</div></div>
+    </div>
+
+    <div class="pdf-section-title">2. Esquema da Fundação</div>
+    ${svgClone.outerHTML}
+
+    <div class="pdf-section-title">3. Desenvolvimento do Cálculo</div>
+    <div class="pdf-calc">
+      <strong>Fatores de capacidade de carga</strong><br>
+      Nq = exp(2·(0,75π − φ/2)·tan φ) / (2·cos²(45+φ/2)) = <strong>${fmtPt(r.Nq)}</strong><br>
+      Nc = (Nq − 1) / tan φ = <strong>${fmtPt(r.Nc)}</strong><br>
+      Nγ = <strong>${fmtPt(r.Ng)}</strong> (interpolado da Tabela Terzaghi 1943)
+    </div>
+    <div class="pdf-calc">
+      <strong>Fatores de forma — ${typeLabel}</strong><br>
+      sc = ${fmtPt(r.sc, 1)} &nbsp;&nbsp; sγ = ${fmtPt(r.sg, 1)}
+    </div>
+    <div class="pdf-calc">
+      <strong>Correção do nível d'água — ${gwCaseName(v)}</strong><br>
+      q = ${fmtPt(r.q_eff)} kPa &nbsp;&nbsp; γeff = ${fmtPt(r.gamma_eff)} kN/m³
+    </div>
+    <div class="pdf-calc">
+      <strong>Capacidade de carga última</strong><br>
+      q_ult = c·Nc·sc + q·Nq + 0,5·γeff·B·Nγ·sγ<br>
+      q_ult = ${fmtPt(v.c)}×${fmtPt(r.Nc)}×${fmtPt(r.sc,1)} + ${fmtPt(r.q_eff)}×${fmtPt(r.Nq)} + 0,5×${fmtPt(r.gamma_eff)}×${fmtPt(v.B)}×${fmtPt(r.Ng)}×${fmtPt(r.sg,1)}<br>
+      q_ult = <strong>${fmtPt(r.q_ult)} kPa</strong>
+    </div>
+
+    <div class="pdf-section-title">4. Resultados</div>
+    <div class="pdf-results">
+      <div class="pdf-result-card">
+        <div class="lbl">Capacidade de carga última</div>
+        <div class="val">${fmtPt(r.q_ult)} kPa</div>
+        <div class="sub">q_ult</div>
+      </div>
+      <div class="pdf-result-card">
+        <div class="lbl">Tensão admissível (FS = ${fmtPt(v.FS, 1)})</div>
+        <div class="val">${fmtPt(r.q_adm)} kPa</div>
+        <div class="sub">q_adm = q_ult / FS</div>
+      </div>
+    </div>
+  `;
+}
+
+function exportPdf() {
+  const v = readInputs();
+  if (!v || !_lastResults) return;
+  buildPdfContent(v, _lastResults);
+  const opt = {
+    margin:      15,
+    filename:    'memorial-terzaghi.pdf',
+    image:       { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+  html2pdf().set(opt).from(document.getElementById('pdf-content')).save();
 }
 
 </script>
