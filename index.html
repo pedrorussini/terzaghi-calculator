@@ -523,7 +523,7 @@ function drawDiagram(vals) {
   const H_SVG = svg.clientHeight || 360;
 
   // ── If no geometry, show placeholder ──────────
-  if (!vals || !vals.Df || !vals.B) {
+  if (!vals || vals.Df == null || !vals.B) {
     svg.innerHTML = `
       <defs>${svgDefs()}</defs>
       <rect width="${W}" height="${H_SVG}" fill="url(#soil-dots)"/>
@@ -548,8 +548,8 @@ function drawDiagram(vals) {
   const availH   = H_SVG - TOP_PAD - BOT_PAD;
   const availW   = W * 0.7;
 
-  // Scene: show Df + 1.5*B below base (for rupture zone sense)
-  const sceneDepth = Df + Math.max(1.5 * B, 1.2);
+  // Scene: show Df + 1.5*B below base, extended to include GWT if deeper
+  const sceneDepth = Math.max(Df + Math.max(1.5 * B, 1.2), gwt < 9000 ? gwt + 0.5 : 0);
   const scale      = Math.min(availH / sceneDepth, availW / (B * 5));
 
   const groundY  = TOP_PAD;
@@ -569,7 +569,7 @@ function drawDiagram(vals) {
   const stemTopY = groundY;
 
   // GWT line
-  const gwt_px   = Math.min(gwt * scale, H_SVG - BOT_PAD - 4);
+  const gwt_px   = gwt * scale;
   const gwtY     = groundY + gwt_px;
   const showGWT  = gwt < 9000 && gwtY < H_SVG - BOT_PAD;
 
