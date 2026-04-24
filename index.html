@@ -285,6 +285,10 @@
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-fs"
         type="button" role="tab">Factor of Safety</button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-theory"
+        type="button" role="tab">Theory</button>
+    </li>
   </ul>
 
   <!-- Tab panes -->
@@ -395,6 +399,107 @@
       </div>
     </div>
 
+    <!-- Theory -->
+    <div class="tab-pane fade" id="tab-theory" role="tabpanel">
+      <div class="py-3">
+
+        <!-- General formula -->
+        <div class="theory-section">
+          <h6>Fórmula Geral — Capacidade de Carga Última</h6>
+          <div class="theory-formula">
+            <span class="term">q<sub>ult</sub></span> =
+            c · N<sub>c</sub> · s<sub>c</sub> &nbsp;+&nbsp;
+            q · N<sub>q</sub> &nbsp;+&nbsp;
+            0,5 · γ<sub>eff</sub> · B · N<sub>γ</sub> · s<sub>γ</sub>
+            <br><br>
+            <span style="font-size:.8rem;color:#6b7280">
+              c = coesão (kPa) &nbsp;·&nbsp;
+              B = largura da fundação (m) &nbsp;·&nbsp;
+              q = sobrecarga efetiva (kPa)<br>
+              Nc, Nq, Nγ = fatores de capacidade de carga &nbsp;·&nbsp;
+              sc, sγ = fatores de forma &nbsp;·&nbsp;
+              γ<sub>eff</sub> = peso específico efetivo (kN/m³)
+            </span>
+          </div>
+        </div>
+
+        <!-- Bearing capacity factors -->
+        <div class="theory-section">
+          <h6>Fatores de Capacidade de Carga — Terzaghi (1943)</h6>
+          <div class="theory-formula">
+            <strong>Para φ = 0°:</strong><br>
+            N<sub>q</sub> = 1,0 &nbsp;·&nbsp; N<sub>c</sub> = 5,7 &nbsp;·&nbsp; N<sub>γ</sub> = 0,0
+            <br><br>
+            <strong>Para φ &gt; 0°:</strong><br>
+            N<sub>q</sub> = exp(2·(0,75π − φ/2)·tan φ) / (2·cos²(45+φ/2))<br>
+            N<sub>c</sub> = (N<sub>q</sub> − 1) / tan φ<br>
+            N<sub>γ</sub> = interpolado linearmente da tabela clássica de Terzaghi (1943):
+          </div>
+          <table class="theory-table">
+            <thead>
+              <tr>
+                <th>φ (°)</th><th>0</th><th>5</th><th>10</th><th>15</th><th>20</th>
+                <th>25</th><th>30</th><th>35</th><th>40</th><th>45</th><th>50</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>N<sub>γ</sub></strong></td>
+                <td>0</td><td>0,5</td><td>1,2</td><td>2,5</td><td>5,0</td>
+                <td>9,7</td><td>19,7</td><td>42,9</td><td>93,7</td><td>262,3</td><td>873,5</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Shape factors -->
+        <div class="theory-section">
+          <h6>Fatores de Forma</h6>
+          <table class="theory-table">
+            <thead>
+              <tr><th>Tipo de fundação</th><th>s<sub>c</sub></th><th>s<sub>γ</sub></th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Corrida (Strip)</td><td>1,0</td><td>1,0</td></tr>
+              <tr><td>Quadrada (Square)</td><td>1,3</td><td>0,8</td></tr>
+              <tr><td>Circular (Circular)</td><td>1,3</td><td>0,6</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- GWT correction -->
+        <div class="theory-section">
+          <h6>Correção do Nível d'Água (NA)</h6>
+          <p style="font-size:.82rem;color:#6b7280;margin-bottom:8px">
+            H = 0,5 · B · tan(45 + φ/2) é a profundidade da cunha de ruptura de Terzaghi.
+          </p>
+          <div class="theory-formula">
+            <strong>Caso 1 — NA ≤ D<sub>f</sub> (acima ou na base):</strong><br>
+            q = γ·NA + (γ − γ<sub>w</sub>)·(D<sub>f</sub> − NA) &nbsp;·&nbsp; γ<sub>eff</sub> = γ − γ<sub>w</sub>
+          </div>
+          <div class="theory-formula">
+            <strong>Caso 2 — D<sub>f</sub> &lt; NA &lt; D<sub>f</sub> + H (dentro da cunha):</strong><br>
+            q = γ·D<sub>f</sub> &nbsp;·&nbsp;
+            γ<sub>eff</sub> = (γ − γ<sub>w</sub>) + (d/H)·γ<sub>w</sub> &nbsp; onde d = NA − D<sub>f</sub>
+          </div>
+          <div class="theory-formula">
+            <strong>Caso 3 — NA ≥ D<sub>f</sub> + H (abaixo da cunha):</strong><br>
+            q = γ·D<sub>f</sub> &nbsp;·&nbsp; γ<sub>eff</sub> = γ &nbsp; (sem correção)
+          </div>
+          <p style="font-size:.8rem;color:#6b7280;margin-top:4px">γ<sub>w</sub> = 9,81 kN/m³</p>
+        </div>
+
+        <!-- References -->
+        <div class="theory-section">
+          <h6>Referências</h6>
+          <p style="font-size:.85rem;color:#374151;margin:0">
+            TERZAGHI, K. <em>Theoretical Soil Mechanics</em>. New York: John Wiley &amp; Sons, 1943.<br>
+            DAS, B. M. <em>Principles of Foundation Engineering</em>. 8th ed. Cengage Learning, 2015.
+          </p>
+        </div>
+
+      </div>
+    </div>
   </div><!-- /tab-content -->
 
   <!-- Status line: missing fields -->
