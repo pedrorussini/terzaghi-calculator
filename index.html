@@ -222,7 +222,7 @@
         <div class="field-box">
           <div class="field-inner" style="min-width:115px">
             <label>D<sub>f</sub> (m)</label>
-            <input id="inp-df" type="number" min="0.1" step="0.1" placeholder="1.5"
+            <input id="inp-df" type="number" min="0" step="0.1" placeholder="1.5"
               oninput="onInput()" />
           </div>
           <span class="info-btn" data-bs-toggle="tooltip"
@@ -353,7 +353,7 @@ function onInput() {
     const B    = parseFloat(document.getElementById('inp-b').value);
     const gwt  = parseFloat(document.getElementById('inp-gwt').value);
     const type = document.getElementById('inp-type').value;
-    if (Df > 0 && B > 0) drawDiagram({ Df, B, gwt: isNaN(gwt) ? 9999 : gwt, type });
+    if (Df >= 0 && B > 0) drawDiagram({ Df, B, gwt: isNaN(gwt) ? 9999 : gwt, type });
     else drawDiagram(null);
     document.getElementById('results-section').style.display = 'none';
     showMissingFields();
@@ -367,7 +367,7 @@ function showMissingFields() {
   const missing = [];
   if (isNaN(parseFloat(document.getElementById('inp-gamma').value))) missing.push('γ (kN/m³)');
   if (isNaN(parseFloat(document.getElementById('inp-df').value)) ||
-      parseFloat(document.getElementById('inp-df').value) <= 0)    missing.push('Df (m)');
+      parseFloat(document.getElementById('inp-df').value) < 0)    missing.push('Df (m)');
   if (isNaN(parseFloat(document.getElementById('inp-b').value)) ||
       parseFloat(document.getElementById('inp-b').value) <= 0)     missing.push('B (m)');
   if (!document.getElementById('inp-type').value)                   missing.push('Fnd Type');
@@ -397,7 +397,7 @@ function readInputs() {
 
   // Required: gamma, Df, B, type, FS
   if (isNaN(gamma) || isNaN(Df) || isNaN(B) || !type || isNaN(FS)) return null;
-  if (Df <= 0 || B <= 0 || FS < 1) return null;
+  if (Df < 0 || B <= 0 || FS < 1) return null;
 
   return {
     c:     isNaN(c)   ? 0    : c,
