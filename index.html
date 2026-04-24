@@ -184,8 +184,8 @@
 
     /* ─── PDF hidden container ───────────────────── */
     #pdf-content {
-      position: absolute;
-      left: -9999px;
+      position: fixed;
+      left: 0;
       top: 0;
       width: 794px; /* A4 at 96dpi */
       background: #fff;
@@ -194,6 +194,9 @@
       color: #1a202c;
       padding: 40px;
       box-sizing: border-box;
+      opacity: 0;
+      pointer-events: none;
+      z-index: -1;
     }
     #pdf-content .pdf-header {
       text-align: center;
@@ -1043,14 +1046,20 @@ function exportPdf() {
   const v = readInputs();
   if (!v || !_lastResults) return;
   buildPdfContent(v, _lastResults);
+  const el = document.getElementById('pdf-content');
+  el.style.opacity = '1';
+  el.style.zIndex  = '9999';
   const opt = {
     margin:      15,
     filename:    'memorial-terzaghi.pdf',
     image:       { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
+    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
     jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
-  html2pdf().set(opt).from(document.getElementById('pdf-content')).save();
+  html2pdf().set(opt).from(el).save().then(() => {
+    el.style.opacity = '0';
+    el.style.zIndex  = '-1';
+  });
 }
 
 </script>
